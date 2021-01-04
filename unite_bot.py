@@ -51,9 +51,10 @@ async def on_guild_join(guild):
     print(type(channel.id))
     insert_guild(guild.id, guild.name, channel.id)
     unite_setup_channels.append(channel.id)
-    # send instructions to private channel
+
+
+    # send instructions in new private unite setup channel
     msg = """
-    **Welcome to the Unite setup process 🤝**
 
 This channel is only visible to the admins of this Discord server and is used to configure the rules for channel access based on how many tokens users have.
 
@@ -65,8 +66,12 @@ You can use the following commands:
 
 **'addrule @role tokenaddress min max'** - for example, '`addrule @pro 0x87b008e57f640d94ee44fd893f0323af933f9195 10 100`' will add a rule that says only users with between 10 and 100 tokens (of the token with address 0x87b008e57f640d94ee44fd893f0323af933f9195) will be given the @pro role. You can use -1 for unlimited max.
 
+You can also message us in the Unite Discord if you need help:
     """
-    await channel.send(msg)
+    embed = discord.Embed()
+    embed.add_field(name="Welcome to the Unite setup process 🤝", value=msg)
+    await channel.send(embed=embed)
+    await channel.send("https://discord.gg/EBJEgVB8us")
 
 
 @client.event
@@ -83,10 +88,9 @@ async def on_message(message):
     #######################
     try:
         if message.channel.id in unite_setup_channels:
-            print("message is in setup channel")
 
             if message.content.lower().startswith('hello') or message.content.lower().startswith('hi'):
-                await message.channel.send("Hello " + message.author.name)
+                await message.channel.send("Hi " + message.author.name.split(" ")[0])
                 return
 
             if message.content.lower().replace("'", "").startswith('rules'):
@@ -96,9 +100,20 @@ async def on_message(message):
                     await message.channel.send("No rules setup yet - try add one using `addrule`")
                     return
                 else:
-                    await message.channel.send(f"These {len(rules)} rules are running:")
-                    for rule in rules:
-                        await message.channel.send(str(rule))
+                    if len(rules) == 1:
+                        await message.channel.send(f"This 1 rule is running:")
+                    else:
+                        await message.channel.send(f"These {len(rules)} rules are running:")
+                    for i, rule in enumerate(rules):
+                        msg = f"""
+{i+1}.                         
+**token_address**: {rule['token_address']}
+**role**: {rule['role_name']}
+**minimum tokens required**: {rule['token_min']}
+**maximum tokens required**: {rule['token_max']}
+
+                        """
+                        await message.channel.send(msg)
                     return 
 
             if message.content.lower().replace("'", "").startswith('addrule'):
@@ -138,13 +153,21 @@ async def on_message(message):
 
             # unrecognized input
             msg = """
-Sorry but that command is not recognized...
 
-Please try type one of 'rules', 'addrule', or 'reset'
+You can use the following commands:
 
-You can also message us in the Unite Discord: https://discord.gg/EBJEgVB8us if you're stuck.
+**'rules'** - display all existing rules
+
+**'reset'** - delete all rules
+
+**'addrule @role tokenaddress min max'** - for example, '`addrule @pro 0x87b008e57f640d94ee44fd893f0323af933f9195 10 100`' will add a rule that says only users with between 10 and 100 tokens (of the token with address 0x87b008e57f640d94ee44fd893f0323af933f9195) will be given the @pro role. You can use -1 for unlimited max.
+
+You can also message us in the Unite Discord if you need help:
             """
-            await message.channel.send(msg)
+            embed = discord.Embed()
+            embed.add_field(name="Sorry but that command is not recognized...", value=msg)
+            await message.channel.send(embed=embed)
+            await message.channel.send("https://discord.gg/EBJEgVB8us")
             return
 
     except Exception as e:
