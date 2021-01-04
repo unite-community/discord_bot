@@ -2,8 +2,8 @@
 # coding: utf-8
 
 import discord
-from discord.utils import find
-from database import select_unite_setup_channel_ids, insert_guild
+from discord.utils import find, get
+from database import select_unite_setup_channel_ids, insert_guild, insert_rule
 
 # load api key
 secret = {}
@@ -53,14 +53,18 @@ async def on_guild_join(guild):
     unite_setup_channels.append(channel.id)
     # send instructions to private channel
     msg = """
-    **Welcome to the Unite bot setup process**
+    **Welcome to the Unite setup process 🤝**
 
 This channel is only visible to the admins of this Discord server and is used to configure the rules for channel access based on how many tokens users have.
 
 You can use the following commands:
+
 **'rules'** - display all existing rules
-**'addrule'** - add new rule for channel access based on user token holdings
+
 **'reset'** - delete all rules
+
+**'addrule @role tokenaddress min max'** - for example, '`addrule @pro 0x87b008e57f640d94ee44fd893f0323af933f9195 10 100`' will add a rule that says only users with between 10 and 100 tokens (of the token with address 0x87b008e57f640d94ee44fd893f0323af933f9195) will be given the @pro role. You can use -1 for unlimited max.
+
     """
     await channel.send(msg)
 
@@ -93,8 +97,26 @@ async def on_message(message):
                 return 
 
             if message.content.lower().replace("'", "").startswith('addrule'):
-                await message.channel.send("DO ADD RULE")
-                # TODO: add rule
+                # add the rule to SQL database
+                try:
+                    # parse add rule command 
+                    splits = message.content.lower().split(" ")
+                    role_id = int(splits[1].replace("<", "").replace(">", "").replace("&", "").replace("@", ""))
+                    token_address = splits[2]
+                    token_min = int(splits[3])
+                    token_max = int(splits[4])
+
+                    # get role for name
+                    role = get(message.guild.roles, id=role_id)
+
+                    # write role to sql
+                    insert_rule(message.guild.id, token_address, token_min, token_max, role_id, role.name)
+
+                    await message.channel.send("Rule successfully added 🙌")
+
+                except Exception as e:
+                    await message.channel.send("Error adding rule 😭 ...please check command format")
+                    print("ERROR", e)
                 return
 
             if message.content.lower().replace("'", "").startswith('reset'):

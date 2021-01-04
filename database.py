@@ -34,3 +34,15 @@ def insert_guild(guild_id, guild_name, unite_setup_channel_id):
     print(cursor.rowcount, "guild inserted")
     cursor.close()
     db.close()
+
+
+def insert_rule(guild_id, token_address, token_min, token_max, role_id, role_name):
+    db = mysql.connect(host=secret['DBHOST'],user=secret['DBUSER'],passwd=secret['DBPASS'],database=secret['DBTABLE'])
+    cursor = db.cursor()
+    query = "INSERT INTO discord_rules (guild_id, token_address, token_min, token_max, role_id, role_name, created_at) VALUES (%s, %s, %s, %s, %s, %s, %s);"
+    values = (guild_id, token_address, token_min, token_max, role_id, role_name, str(datetime.datetime.now()).split('.')[0])
+    cursor.execute(query, values)
+    db.commit()
+    print(cursor.rowcount, "record inserted")
+    cursor.close()
+    db.close()
