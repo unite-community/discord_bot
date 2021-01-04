@@ -130,7 +130,10 @@ async def on_message(message):
 
             if message.content.lower().replace("'", "").startswith('reset'):
                 await message.channel.send("BRB processing...")
-                reset_rules()
+                rules = select_rules(message.guild.id)
+                reset_rules(message.guild.id)
+                if len(rules) > 0:
+                    await message.channel.send(f"Deleted {len(rules)} rules")
                 await message.channel.send("Done resetting rules - use `addrule` to set up a new rule")
                 # TODO: reset rules
                 return
