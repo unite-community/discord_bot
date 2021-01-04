@@ -3,7 +3,7 @@
 
 import discord
 from discord.utils import find, get
-from database import select_unite_setup_channel_ids, insert_guild, insert_rule, select_rules
+from database import select_unite_setup_channel_ids, insert_guild, insert_rule, select_rules, reset_rules
 
 # load api key
 secret = {}
@@ -129,7 +129,9 @@ async def on_message(message):
                 return
 
             if message.content.lower().replace("'", "").startswith('reset'):
-                await message.channel.send("DO RESET")
+                await message.channel.send("BRB processing...")
+                reset_rules()
+                await message.channel.send("Done resetting rules - use `addrule` to set up a new rule")
                 # TODO: reset rules
                 return
 

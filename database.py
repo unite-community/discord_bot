@@ -64,5 +64,13 @@ def select_rules(guild_id):
     return rules
 
 
-
-
+def reset_rules(guild_id):
+    db = mysql.connect(host=secret['DBHOST'],user=secret['DBUSER'],passwd=secret['DBPASS'],database=secret['DBTABLE'])
+    cursor = db.cursor()
+    query = "DELETE from discord_rules where guild_id = %s;"
+    values = (str(guild_id),)
+    cursor.execute(query, values)
+    db.commit()
+    print(cursor.rowcount, "record deleted")
+    cursor.close()
+    db.close()
