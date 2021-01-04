@@ -26,7 +26,6 @@ Run `python unite_bot.py`
 * pull role names from guild instead of db (in case they were edited)
 
 
-
 ## Architecture v1
 
 ### Setting up discord to use token-gated access

@@ -35,7 +35,7 @@ async def on_guild_join(guild):
     # post hello message
     general = find(lambda x: x.name == 'general', guild.text_channels)
     if general and general.permissions_for(guild.me).send_messages:
-        await general.send('Hello {}!'.format(guild.name))
+        await general.send('Hello World')
 
     # create private channel
     overwrites = {
@@ -95,25 +95,33 @@ async def on_message(message):
 
             if message.content.lower().replace("'", "").startswith('rules'):
                 await message.channel.send("BRB processing...")
+
+                # get rules and loop over them to build reply
                 rules = select_rules(message.guild.id)
                 if len(rules) == 0:
                     await message.channel.send("No rules setup yet - try add one using `addrule`")
                     return
                 else:
                     if len(rules) == 1:
-                        await message.channel.send(f"This 1 rule is running:")
+                        msg_title = "This 1 rule is running:"
                     else:
-                        await message.channel.send(f"These {len(rules)} rules are running:")
+                        msg_title = f"These {len(rules)} rules are running:\n"
+
+                    msg = ""
                     for i, rule in enumerate(rules):
-                        msg = f"""
+                        msg +=f"""
 {i+1}.                         
 **token_address**: {rule['token_address']}
 **role**: {rule['role_name']}
 **minimum tokens required**: {rule['token_min']}
 **maximum tokens required**: {rule['token_max']}
-
                         """
-                        await message.channel.send(msg)
+
+                    # send rules msg
+                    embed = discord.Embed()
+                    embed.add_field(name=msg_title, value=msg)
+                    await message.channel.send(embed=embed)
+
                     return 
 
             if message.content.lower().replace("'", "").startswith('addrule'):
@@ -163,11 +171,11 @@ You can use the following commands:
 **'addrule @role tokenaddress min max'** - for example, '`addrule @pro 0x87b008e57f640d94ee44fd893f0323af933f9195 10 100`' will add a rule that says only users with between 10 and 100 tokens (of the token with address 0x87b008e57f640d94ee44fd893f0323af933f9195) will be given the @pro role. You can use -1 for unlimited max.
 
 You can also message us in the Unite Discord if you need help:
+https://discord.gg/EBJEgVB8us
             """
             embed = discord.Embed()
             embed.add_field(name="Sorry but that command is not recognized...", value=msg)
             await message.channel.send(embed=embed)
-            await message.channel.send("https://discord.gg/EBJEgVB8us")
             return
 
     except Exception as e:
