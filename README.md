@@ -24,6 +24,9 @@ Run `python unite_bot.py`
 
 
 ## Todo
+* remove roles if balance not satisfied
+* run rules assignment process on schedule
+* //
 * pull role names in rules list from guild instead of db (in case they were edited)
 * make roles use proper embeds so they display coloured and highlighted
 * send image showing how to re-order roles

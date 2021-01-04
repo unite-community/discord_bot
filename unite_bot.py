@@ -121,54 +121,6 @@ async def on_message(message):
     try:
         if message.channel.id in unite_setup_channels:
 
-
-            if message.content.lower().replace("'", "").startswith('test'):
-                await message.channel.send("processing BRB...")
-
-                # select rules
-                rules = select_rules(message.guild.id)
-
-                # select users
-                users = select_users()
-
-                # create list and dict for lookups
-                user_ids = [int(u['discord_user_id']) for u in users]
-                user_wallets = {int(u['discord_user_id']): u['ethereum_address'] for u in users}
-
-                roles_updated = 0
-                async for member in message.guild.fetch_members(limit=None):
-                    print("{},{},{},{}".format(message.guild, member, member.id, member.display_name))
-                    if member.id in user_ids:
-                        print(f"User match {member.id} - begin roles process")
-
-                        # get wallet for this user
-                        wallet = user_wallets[member.id]
-
-                        for rule in rules:
-                            # get user balance for this token
-                            balance = get_wallet_erc20_balance(wallet, rule['token_address'])
-                            print(f"Token {rule['token_address']} balance for user: {balance}")
-
-                            # get rule ranges
-                            token_min = rule['token_min']
-                            token_max = rule['token_max']
-                            if token_max is None:
-                                token_max = 999999999999999999
-
-                            if balance >= token_min and balance <= token_max:
-                                print("rule satisfied - assigning role")
-                                roles_updated+=1
-                                # assign role
-                                role = get(message.guild.roles, id=int(rule['role_id']))
-                                await member.add_roles(role)
-                                print(f"assigned {role} to {member}")
-                            else:
-                                print("rule not satisfied")
-                await message.channel.send(f"{roles_updated} roles updated")
-                return
-
-
-
             if message.content.lower().startswith('hello') or message.content.lower().startswith('hi'):
                 await message.channel.send("Hi " + message.author.name.split(" ")[0])
                 return
@@ -210,11 +162,13 @@ async def on_message(message):
                 # add the rule to SQL database
                 try:
                     # parse add rule command 
-                    splits = message.content.lower().split(" ")
+                    splits = [s.strip() for s in message.content.lower().split(" ")]
                     role_id = int(splits[1].replace("<", "").replace(">", "").replace("&", "").replace("@", ""))
                     token_address = splits[2]
                     token_min = int(splits[3])
                     token_max = int(splits[4])
+                    if token_max == -1:
+                        token_max = None
 
                     # get role for name
                     role = get(message.guild.roles, id=role_id)
@@ -223,6 +177,48 @@ async def on_message(message):
                     insert_rule(message.guild.id, token_address, token_min, token_max, role_id, role.name)
 
                     await message.channel.send("Rule successfully added 🙌")
+
+                    #####################
+                    ### RUN RULES PROCESS
+                    #####################
+
+                    await message.channel.send("Running roles update process...")
+
+                    # select users
+                    users = select_users()
+
+                    # create list and dict for lookups
+                    user_ids = [int(u['discord_user_id']) for u in users]
+                    user_wallets = {int(u['discord_user_id']): u['ethereum_address'] for u in users}
+
+                    roles_updated = 0
+                    async for member in message.guild.fetch_members(limit=None):
+                        print("{},{},{},{}".format(message.guild, member, member.id, member.display_name))
+                        if member.id in user_ids:
+                            print(f"User match {member.id} - begin roles process")
+
+                            # get wallet for this user
+                            wallet = user_wallets[member.id]
+
+                            # get user balance for this token
+                            balance = get_wallet_erc20_balance(wallet, token_address)
+                            print(f"Token {token_address} balance for user: {balance}")
+
+                            # get rule ranges
+                            if token_max is None:
+                                token_max = 999999999999999999
+
+                            if balance >= token_min and balance <= token_max:
+                                print("rule satisfied - assigning role")
+                                roles_updated += 1
+                                # assign role
+                                role = get(message.guild.roles, id=int(role_id))
+                                await member.add_roles(role)
+                                print(f"assigned {role} to {member}")
+                            else:
+                                print("rule not satisfied")
+                    await message.channel.send(f"{roles_updated} roles updated")
+                    return
 
                 except Exception as e:
                     await message.channel.send("Error adding rule 😭 ...please check command format")
