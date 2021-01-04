@@ -74,3 +74,17 @@ def reset_rules(guild_id):
     print(cursor.rowcount, "record deleted")
     cursor.close()
     db.close()
+
+def select_users():
+    db = mysql.connect(host=secret['DBHOST'],user=secret['DBUSER'],passwd=secret['DBPASS'],database=secret['DBTABLE'])
+    cursor = db.cursor()
+    query = f'SELECT discord_user_id, discord_user_name, ethereum_address FROM discord_user_wallets;'
+    cursor.execute(query)
+    records = cursor.fetchall()
+    cursor.close()
+    db.close()
+    #
+    users = []
+    for record in records:
+        users.append(dict(zip(['discord_user_id', 'discord_user_name', 'ethereum_address'], record)))
+    return users

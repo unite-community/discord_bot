@@ -19,16 +19,16 @@ Run `python unite_bot.py`
 1. Invite the bot to the discord channel using the invite link:
 > https://discord.com/api/oauth2/authorize?client_id=789456739023192075&permissions=268437520&scope=bot
 
-2. Bot will create `unite-setup` channel - follow instructions to set up rules
-
+2. Bot will create `unite-setup` channel - follow instructions to set up rules e.g. 
+> addrule @level 1 0x87b008e57f640d94ee44fd893f0323af933f9195 1 10
 
 
 ## Todo
-* check for overlapping / invalid rules
-* pull role names from guild instead of db (in case they were edited)
-* configure network
-
-
+* pull role names in rules list from guild instead of db (in case they were edited)
+* make roles use proper embeds so they display coloured and highlighted
+* send image showing how to re-order roles
+* don't re-assign role if already satisfied
+* get balance once for all rules (assuming we decide only 1 token sets the rules)
 
 ## Architecture v1
 

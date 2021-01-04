@@ -1,24 +1,52 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+import json
 import discord
 from discord.utils import find, get
-from database import select_unite_setup_channel_ids, insert_guild, insert_rule, select_rules, reset_rules
+from web3 import Web3
+from database import select_unite_setup_channel_ids, insert_guild, insert_rule, select_rules, reset_rules, select_users
+
 
 # load api key
 secret = {}
 with open('secret.txt') as f:
     lines = f.readlines()
     for line in lines:
-        secret[line.split("=")[0]] = line.split("=")[1].replace("\n","")
+        secret[line.split("=")[0]] = line.split("=")[1].replace("\n", "")
 
-# init client
+################
+### INIT DISCORD
+################
+
+# init discord client
 client = discord.Client()
 
 # load list of unite setup channel ids
 unite_setup_channels = select_unite_setup_channel_ids()
 print(f"Loaded {len(unite_setup_channels)} unite setup channel ids")
 
+
+#############
+### INIT WEB3
+#############
+
+# load erc20 abi for fetching token balance
+with open('abi_erc20.json') as f:
+    abi = json.load(f)
+
+# init web3
+infura_url = secret['INFURAURL1']
+web3 = Web3(Web3.HTTPProvider(infura_url))
+print(f"Connected to infura: {infura_url}")
+
+# define function to get erc20 token balance for a wallet
+def get_wallet_erc20_balance(wallet, token):
+    contract = web3.eth.contract(abi=abi, address=Web3.toChecksumAddress(str(token)))
+    raw_balance = contract.functions.balanceOf(wallet).call()
+    balance = raw_balance/10**(contract.functions.decimals().call())
+    print(f"wallet {wallet} has {balance} tokens")
+    return balance
 
 ########################
 ### SETUP DISCORD EVENTS
@@ -58,12 +86,13 @@ async def on_guild_join(guild):
 
 This channel is only visible to the admins of this Discord server and is used to configure the rules for channel access based on how many tokens users have.
 
+Channel access is managed by assigning users roles and limiting channels to specific roles. Before you configure rules for which roles are assigned based on token balances, you should first set up the roles you want to assign to users. One important detail is you need to move the `Unite.community Discord Manager` role above all other roles that you configure in order for the manager to work.
+
+Once you have set up the roles you will use, you need to set up rules that determine how many tokens a user needs to be assigned a role.
+
 You can use the following commands:
-
 **'rules'** - display all existing rules
-
 **'reset'** - delete all rules
-
 **'addrule @role tokenaddress min max'** - for example, '`addrule @pro 0x87b008e57f640d94ee44fd893f0323af933f9195 10 100`' will add a rule that says only users with between 10 and 100 tokens (of the token with address 0x87b008e57f640d94ee44fd893f0323af933f9195) will be given the @pro role. You can use -1 for unlimited max.
 
 You can also message us in the Unite Discord if you need help:
@@ -72,6 +101,9 @@ You can also message us in the Unite Discord if you need help:
     embed.add_field(name="Welcome to the Unite setup process 🤝", value=msg)
     await channel.send(embed=embed)
     await channel.send("https://discord.gg/EBJEgVB8us")
+
+    # reset rules - mostly for debugging
+    reset_rules(guild.id)
 
 
 @client.event
@@ -89,12 +121,60 @@ async def on_message(message):
     try:
         if message.channel.id in unite_setup_channels:
 
+
+            if message.content.lower().replace("'", "").startswith('test'):
+                await message.channel.send("processing BRB...")
+
+                # select rules
+                rules = select_rules(message.guild.id)
+
+                # select users
+                users = select_users()
+
+                # create list and dict for lookups
+                user_ids = [int(u['discord_user_id']) for u in users]
+                user_wallets = {int(u['discord_user_id']): u['ethereum_address'] for u in users}
+
+                roles_updated = 0
+                async for member in message.guild.fetch_members(limit=None):
+                    print("{},{},{},{}".format(message.guild, member, member.id, member.display_name))
+                    if member.id in user_ids:
+                        print(f"User match {member.id} - begin roles process")
+
+                        # get wallet for this user
+                        wallet = user_wallets[member.id]
+
+                        for rule in rules:
+                            # get user balance for this token
+                            balance = get_wallet_erc20_balance(wallet, rule['token_address'])
+                            print(f"Token {rule['token_address']} balance for user: {balance}")
+
+                            # get rule ranges
+                            token_min = rule['token_min']
+                            token_max = rule['token_max']
+                            if token_max is None:
+                                token_max = 999999999999999999
+
+                            if balance >= token_min and balance <= token_max:
+                                print("rule satisfied - assigning role")
+                                roles_updated+=1
+                                # assign role
+                                role = get(message.guild.roles, id=int(rule['role_id']))
+                                await member.add_roles(role)
+                                print(f"assigned {role} to {member}")
+                            else:
+                                print("rule not satisfied")
+                await message.channel.send(f"{roles_updated} roles updated")
+                return
+
+
+
             if message.content.lower().startswith('hello') or message.content.lower().startswith('hi'):
                 await message.channel.send("Hi " + message.author.name.split(" ")[0])
                 return
 
             if message.content.lower().replace("'", "").startswith('rules'):
-                await message.channel.send("BRB processing...")
+                await message.channel.send("processing BRB...")
 
                 # get rules and loop over them to build reply
                 rules = select_rules(message.guild.id)
@@ -110,12 +190,12 @@ async def on_message(message):
                     msg = ""
                     for i, rule in enumerate(rules):
                         msg +=f"""
-{i+1}.                         
+{i+1}.
 **token_address**: {rule['token_address']}
 **role**: {rule['role_name']}
 **minimum tokens required**: {rule['token_min']}
 **maximum tokens required**: {rule['token_max']}
-                        """
+"""
 
                     # send rules msg
                     embed = discord.Embed()
@@ -125,7 +205,7 @@ async def on_message(message):
                     return 
 
             if message.content.lower().replace("'", "").startswith('addrule'):
-                await message.channel.send("BRB processing...")
+                await message.channel.send("processing BRB...")
 
                 # add the rule to SQL database
                 try:
@@ -150,7 +230,7 @@ async def on_message(message):
                 return
 
             if message.content.lower().replace("'", "").startswith('reset'):
-                await message.channel.send("BRB processing...")
+                await message.channel.send("processing BRB...")
                 rules = select_rules(message.guild.id)
                 reset_rules(message.guild.id)
                 if len(rules) > 0:
