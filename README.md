@@ -6,18 +6,20 @@ https://www.freecodecamp.org/news/create-a-discord-bot-with-python/
 
 It also needs the following permissions:
 * "Server Members Intent" permission under `Bot -> Priveleged Gateway Intents` section of the Discord Developer Portal for the bot.
-* TODO
+* Send Messages
+* Manage Roles
+* Manage Channels
+
 
 ## Running the bot
 Run `python unite_bot.py`
 
-## Using the bot
 
+## Using the bot
 1. Invite the bot to the discord channel using the invite link:
 > https://discord.com/api/oauth2/authorize?client_id=789456739023192075&permissions=268437520&scope=bot
 
-2. TODO
-
+2. Bot will create `unite-setup` channel - follow instructions to set up rules
 
 
 
