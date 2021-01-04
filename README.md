@@ -20,6 +20,13 @@ Run `python unite_bot.py`
 
 
 
+
+## Todo
+* check for overlapping / invalid rules
+* pull role names from guild instead of db (in case they were edited)
+
+
+
 ## Architecture v1
 
 ### Setting up discord to use token-gated access

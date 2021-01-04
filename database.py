@@ -46,3 +46,23 @@ def insert_rule(guild_id, token_address, token_min, token_max, role_id, role_nam
     print(cursor.rowcount, "record inserted")
     cursor.close()
     db.close()
+
+
+def select_rules(guild_id):
+    db = mysql.connect(host=secret['DBHOST'],user=secret['DBUSER'],passwd=secret['DBPASS'],database=secret['DBTABLE'])
+    cursor = db.cursor()
+    query = f'SELECT token_address, token_min, token_max, role_id, role_name FROM discord_rules where guild_id = {guild_id};'
+    cursor.execute(query)
+    records = cursor.fetchall()
+    cursor.close()
+    db.close()
+    #
+    rules = []
+    for record in records:
+        rule = dict(zip(['token_address', 'token_min', 'token_max', 'role_id', 'role_name'], record))
+        rules.append(rule)
+    return rules
+
+
+
+

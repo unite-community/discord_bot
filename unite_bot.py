@@ -3,7 +3,7 @@
 
 import discord
 from discord.utils import find, get
-from database import select_unite_setup_channel_ids, insert_guild, insert_rule
+from database import select_unite_setup_channel_ids, insert_guild, insert_rule, select_rules
 
 # load api key
 secret = {}
@@ -92,11 +92,20 @@ async def on_message(message):
                 return
 
             if message.content.lower().replace("'", "").startswith('rules'):
-                await message.channel.send("DO RULES")
-                # TODO: list rules
-                return 
+                await message.channel.send("BRB processing...")
+                rules = select_rules(message.guild.id)
+                if len(rules) == 0:
+                    await message.channel.send("No rules setup yet - try add one using `addrule`")
+                    return
+                else:
+                    await message.channel.send(f"These {len(rules)} rules are running:")
+                    for rule in rules:
+                        await message.channel.send(str(rule))
+                    return 
 
             if message.content.lower().replace("'", "").startswith('addrule'):
+                await message.channel.send("BRB processing...")
+
                 # add the rule to SQL database
                 try:
                     # parse add rule command 
