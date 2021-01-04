@@ -20,7 +20,7 @@ def select_unite_setup_channel_ids():
     #
     unite_setup_channels = []
     for record in records:
-        unite_setup_channels.append(record[0])
+        unite_setup_channels.append(int(record[0]))
     return unite_setup_channels
 
 

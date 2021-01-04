@@ -48,6 +48,7 @@ async def on_guild_join(guild):
     # save guild with unite setup channel id 
     # this is so that we can listen for messages in that channel
     print(f"Created channel {channel.id} - {channel.name} in guild {guild.id} - {guild.name}")
+    print(type(channel.id))
     insert_guild(guild.id, guild.name, channel.id)
     unite_setup_channels.append(channel.id)
     # send instructions to private channel
