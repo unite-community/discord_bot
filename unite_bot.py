@@ -72,13 +72,11 @@ You can use the following commands:
 @client.event
 async def on_message(message):
     # debug
-    print(f"{message.author} ({message.channel.id} - {message.channel.name}) {message.content}")
+    # print(f"{message.author} ({message.channel.id} - {message.channel.name}) {message.content}")
 
     if message.author == client.user:
         return
 
-    if message.content.startswith('!setup'):
-        await message.channel.send("Hello " + message.author.name)
 
     #######################
     ### unite setup channel
@@ -88,7 +86,7 @@ async def on_message(message):
             print("message is in setup channel")
 
             if message.content.lower().startswith('hello') or message.content.lower().startswith('hi'):
-                await message.channel.send("hello")
+                await message.channel.send("Hello " + message.author.name)
                 return
 
             if message.content.lower().replace("'", "").startswith('rules'):
