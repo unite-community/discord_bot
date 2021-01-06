@@ -52,35 +52,3 @@ Run
 * send image showing how to re-order roles
 * don't re-assign role if already satisfied
 * get balance once for all rules (assuming we decide only 1 token sets the rules)
-
-## Architecture v1
-
-### Setting up discord to use token-gated access
-1. click bot invite link and add bot to your discord
-2. bot creates private channel and messages in it saying nobody can see it, tells you to set up roles then addrole etc.
-3. displays all available roles and says type !addrule @role min max token
-4. saves role params to `discord_roles` sql table (guild_id, role_id, token_address, min, max) and triggers running roles assignment process
-5. run role assignment process
-
-### Role assignment process
-1. get all rules
-2. get all users in discord_roles table
-3. get all users across guilds that the bot is installed on. for each user:
-3.1. if user in users: get token balance for their wallet
-3.2. update roles based on rules
-
-### Initializing discord roles
-1. click link to unite page.
-2. log in using wallet
-3. click discord oauth link - pass wallet in link 
-4. saves discord:wallet:guild mapping in `discord_members` sql table (wallet, guild_id, discord_username)
-5. checks token balance for this wallet then loops over `discord_roles` rows and adds/removes user roles
-6. bot updates roles and invites you to discord
-
-### Scheduled roles assignemnt process
-every 4 hours:
-1. checks token balance for this wallet then loops over `discord_roles` rows and adds/removes user roles
-
-
-
-
