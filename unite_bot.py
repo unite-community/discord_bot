@@ -86,9 +86,9 @@ async def on_guild_join(guild):
 
 This channel is only visible to the admins of this Discord server and is used to configure the rules for channel access based on how many tokens users have.
 
-Channel access is managed by assigning users roles and limiting channels to specific roles. Before you configure rules for which roles are assigned based on token balances, you should first set up the roles you want to assign to users. One important detail is you need to move the `Unite.community Discord Manager` role above all other roles that you configure in order for the manager to work.
+Channel access is managed by assigning users roles and limiting channels to specific roles. Before you configure rules for which roles are assigned based on token balances, you should first set up the roles you want to assign to users. 
 
-Once you have set up the roles you will use, you need to set up rules that determine how many tokens a user needs to be assigned a role.
+Once you have set up roles, you need to set up rules that determine how many tokens a user needs to be assigned a role:
 
 You can use the following commands:
 **'rules'** - display all existing rules
@@ -120,6 +120,13 @@ async def on_message(message):
     #######################
     try:
         if message.channel.id in unite_setup_channels:
+
+
+            if message.content.startswith('test'):
+                async for member in message.guild.fetch_members(limit=None):
+                    print("{},{},{},{}".format(message.guild, member, member.id, member.display_name))
+                return
+
 
             if message.content.lower().startswith('hello') or message.content.lower().startswith('hi'):
                 await message.channel.send("Hi " + message.author.name.split(" ")[0])

@@ -1,18 +1,38 @@
-# Unite Discord Userlist bot
+# Unite Discord bot
 
-## Setup
-Follow these steps to set up bot permissions:
-https://www.freecodecamp.org/news/create-a-discord-bot-with-python/
+Discord bot for updating user roles in a Discord server based on token holdings. 
 
-It also needs the following permissions:
+The user will invite the bot to their discord and the bot will create private channel for user to set up rules that map token holdings to Discord roles for the users in the discord server being configured. 
+
+It automatically monitors user balances and updates roles when balances do not meet user-defined rules.
+
+## Setup 
+Go to the Discord [developer site](https://discordapp.com/developers/applications/me) to create an application with the following permissions:
+
 * "Server Members Intent" permission under `Bot -> Priveleged Gateway Intents` section of the Discord Developer Portal for the bot.
 * Send Messages
 * Manage Roles
 * Manage Channels
 
 
-## Running the bot
-Run `python unite_bot.py`
+
+Save the discord bot credentials `client id` and `client secret` in `secret.txt` which also needs to include SQL connection details and Infura details.
+
+```json
+CLIENTID=1234...
+SECRET=ABCD...
+DBHOST=12.34.56.78
+DBUSER=abc...
+DBPASS=abc...
+DBTABLE=abc...
+REDIRECTURL=https://unite.community/
+```
+
+Install dependencies
+> `pip install -r requirements.txt`
+
+Run
+> `python unite_bot.py`
 
 
 ## Using the bot
