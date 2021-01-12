@@ -224,7 +224,7 @@ async def on_message(message):
                                 print(f"assigned {role} to {member}")
                             else:
                                 print("rule not satisfied")
-                    await message.channel.send(f"{roles_updated} roles updated")
+                    #await message.channel.send(f"{roles_updated} roles updated")
                     return
 
                 except Exception as e:
