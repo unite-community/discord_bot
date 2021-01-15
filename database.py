@@ -75,6 +75,7 @@ def reset_rules(guild_id):
     cursor.close()
     db.close()
 
+
 def select_users():
     db = mysql.connect(host=secret['DBHOST'],user=secret['DBUSER'],passwd=secret['DBPASS'],database=secret['DBTABLE'])
     cursor = db.cursor()

@@ -48,6 +48,8 @@ Run
 * //
 * pull role names in rules list from guild instead of db (in case they were edited)
 * make roles use proper embeds so they display coloured and highlighted
+* message user telling them roles updated
 * send image showing how to re-order roles
 * don't re-assign role if already satisfied
 * get balance once for all rules (assuming we decide only 1 token sets the rules)
+* DM alex / sebastian on errors / rate limits

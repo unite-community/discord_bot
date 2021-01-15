@@ -2,11 +2,19 @@
 # coding: utf-8
 
 import json
+from datetime import datetime
 import discord
+from discord.ext import tasks, commands
 from discord.utils import find, get
 from web3 import Web3
 from database import select_unite_setup_channel_ids, insert_guild, insert_rule, select_rules, reset_rules, select_users
 
+import logging
+logger = logging.getLogger('discord')
+logger.setLevel(logging.WARNING)
+handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+logger.addHandler(handler)
 
 # load api key
 secret = {}
@@ -20,7 +28,9 @@ with open('secret.txt') as f:
 ################
 
 # init discord client
-client = discord.Client()
+intents = discord.Intents.default()
+intents.members = True
+client = discord.Client(intents=intents)
 
 # load list of unite setup channel ids
 unite_setup_channels = select_unite_setup_channel_ids()
@@ -56,6 +66,29 @@ def get_wallet_erc20_balance(wallet, token):
 async def on_ready():
     print('Discord bot running as {0.user}'.format(client))
 
+    # DM alex
+    user = client.get_user(519075961891979265)
+    await user.send(str(datetime.now()).split(".")[0] + ' Unite bot started')
+
+
+    # log all members across guilds the bot is in
+    # for guild in client.guilds:
+    #     member_count = guild.member_count
+    #     print("{}, {}".format(guild, member_count))
+    #     async for member in guild.fetch_members(limit=None):
+    #         print("{},{},{},{}".format(guild, member, member.id, member.display_name))
+
+    await continuous_loop.start()
+
+
+@tasks.loop(seconds=5.0)
+async def continuous_loop():
+    print(f"Running continuous loop {str(datetime.now()).split('.')[0]}")
+    # user = client.get_user(519075961891979265)
+    # await user.send(str(datetime.now()) + ' ping')
+
+    
+
 
 @client.event
 async def on_guild_join(guild):
@@ -63,7 +96,7 @@ async def on_guild_join(guild):
     # post hello message
     general = find(lambda x: x.name == 'general', guild.text_channels)
     if general and general.permissions_for(guild.me).send_messages:
-        await general.send('Hello World')
+        await general.send('Hello world 🤝')
 
     # create private channel
     overwrites = {
@@ -120,7 +153,6 @@ async def on_message(message):
     #######################
     try:
         if message.channel.id in unite_setup_channels:
-
 
             if message.content.startswith('test'):
                 async for member in message.guild.fetch_members(limit=None):
@@ -185,6 +217,7 @@ async def on_message(message):
 
                     await message.channel.send("Rule successfully added 🙌")
 
+
                     #####################
                     ### RUN RULES PROCESS
                     #####################
@@ -215,16 +248,19 @@ async def on_message(message):
                             if token_max is None:
                                 token_max = 999999999999999999
 
+                            # get role object
+                            role = get(message.guild.roles, id=int(role_id))
+
                             if balance >= token_min and balance <= token_max:
                                 print("rule satisfied - assigning role")
                                 roles_updated += 1
-                                # assign role
-                                role = get(message.guild.roles, id=int(role_id))
+                                # add role
                                 await member.add_roles(role)
-                                print(f"assigned {role} to {member}")
+                                print(f"added {role} for {member}")
                             else:
-                                print("rule not satisfied")
-                    #await message.channel.send(f"{roles_updated} roles updated")
+                                # remove role
+                                await member.remove_roles(role)
+                                print(f"removed {role} for {member}")
                     return
 
                 except Exception as e:
