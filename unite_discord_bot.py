@@ -4,14 +4,14 @@
 import json
 from datetime import datetime
 import discord
-from discord.ext import tasks, commands
+from discord.ext import tasks
 from discord.utils import find, get
 from web3 import Web3
-from database import select_unite_setup_channel_ids, insert_guild, insert_rule, select_rules, reset_rules, select_users
+from database import select_unite_setup_channel_ids, insert_guild, insert_rule, select_rules, reset_rules, select_users, update_user
 
 import logging
 logger = logging.getLogger('discord')
-logger.setLevel(logging.WARNING)
+logger.setLevel(logging.INFO)
 handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
@@ -87,7 +87,15 @@ async def continuous_loop():
     # user = client.get_user(519075961891979265)
     # await user.send(str(datetime.now()) + ' ping')
 
-    
+    # run roles process for:
+    # 1. all users with null updated_at in discord_user_wallets table (these just Auth'd seconds ago)
+    # 2. all users with update time older than 4 hours
+
+
+
+
+    # set update time for this user
+    # update_user(member.id)
 
 
 @client.event
@@ -256,11 +264,11 @@ async def on_message(message):
                                 roles_updated += 1
                                 # add role
                                 await member.add_roles(role)
-                                print(f"added {role} for {member}")
+                                print(f"added '{role}' role for {member}")
                             else:
                                 # remove role
                                 await member.remove_roles(role)
-                                print(f"removed {role} for {member}")
+                                print(f"removed '{role}' role for {member}")
                     return
 
                 except Exception as e:

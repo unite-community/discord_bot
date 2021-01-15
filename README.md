@@ -53,3 +53,5 @@ Run
 * don't re-assign role if already satisfied
 * get balance once for all rules (assuming we decide only 1 token sets the rules)
 * DM alex / sebastian on errors / rate limits
+* validate addrule inputs
+* add try catch around add/remove roles calls and tell user to check that bot role is above roles being assigned

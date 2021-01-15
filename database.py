@@ -89,3 +89,18 @@ def select_users():
     for record in records:
         users.append(dict(zip(['discord_user_id', 'discord_user_name', 'ethereum_address'], record)))
     return users
+
+
+def update_user(discord_user_id):
+    # update blockchain_write_time
+    db = mysql.connect(host=secret['DBHOST'],user=secret['DBUSER'],passwd=secret['DBPASS'],database=secret['DBTABLE'])
+    cursor = db.cursor()
+    query = "UPDATE discord_user_wallets SET updated_at=%s WHERE discord_user_id=%s;"
+    values = (str(datetime.datetime.now()).split('.')[0], discord_user_id)
+    cursor.execute(query, values)
+    db.commit()
+    print(f"Updated {values[1]} to {values[0]}")
+    cursor.close()
+    db.close()  
+
+
