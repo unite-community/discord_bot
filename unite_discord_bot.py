@@ -89,6 +89,7 @@ async def continuous_loop():
 
     ### TODO
     # make sure we trigger refresh when user re-connects discord oauth
+    # trigger refresh when new rule added for a guild 
 
     #####################
     ### RUN RULES PROCESS
@@ -102,74 +103,80 @@ async def continuous_loop():
     user_ids = [int(u['account_id']) for u in users]
     user_wallets = {int(u['account_id']): u['ethereum_address'] for u in users}
 
-    print("USER IDS")
-    print(user_ids)
 
-    for guild in client.guilds:
+    if len(user_ids) > 0:
+        print("USER IDS")
+        print(user_ids)
 
-        print(f'Begin running rules process for {guild} ({guild.id})')
-        rules = select_rules(guild.id)
-        print(f"{len(rules)} rules found:")
-        print(rules)
+        for guild in client.guilds:
 
-        if len(rules) > 0:
-            async for member in guild.fetch_members(limit=None):
-                print(">> ", member.id)
-                if member.id in user_ids:
-                    user_id = member.id
+            print(f'Begin running rules process for {guild} ({guild.id})')
+            rules = select_rules(guild.id)
+            print(f"{len(rules)} rules found:")
 
-                    print(f"matched user {member} ({user_id}) in guild ", guild)
+            if len(rules) > 0:
+                async for member in guild.fetch_members(limit=None):
+                    print(">> ", member.id)
+                    if member.id in user_ids:
+                        user_id = member.id
 
-                    # get unique list of tokens
-                    token_addresses = [r['token_address'] for r in rules]
-                    token_addresses = list(set(token_addresses))
-                    print(f"{len(token_addresses)} unique tokens for rules in this guild")
-                    print(token_addresses)
+                        print(f"matched user {member} ({user_id}) in guild ", guild)
 
-                    # get balances for tokens in this guild's rules
-                    user_balances = {}
-                    for token_address in token_addresses:
-                        print(f"Fetching user balance for {user_wallets[user_id]} wallet and token {token_address}")
-                        user_balances[token_address] = get_wallet_erc20_balance(user_wallets[user_id], token_address)
+                        # get unique list of tokens
+                        token_addresses = [r['token_address'] for r in rules]
+                        token_addresses = list(set(token_addresses))
+                        print(f"{len(token_addresses)} unique tokens for rules in this guild")
+                        print(token_addresses)
 
-                    print(f"{len(user_balances)} User balances for tokens in guild:")
-                    print(user_balances)
+                        # get balances for tokens in this guild's rules
+                        user_balances = {}
+                        for token_address in token_addresses:
+                            print(f"Fetching user balance for {user_wallets[user_id]} wallet and token {token_address}")
+                            user_balances[token_address] = get_wallet_erc20_balance(user_wallets[user_id], token_address)
 
-                    # get unique list of roles across rules
-                    roles_for_rules = [r['role_id'] for r in rules]
-                    roles_for_rules = list(set(roles_for_rules))
+                        print(f"{len(user_balances)} User balances for tokens in guild:")
+                        print(user_balances)
 
-                    print("Roles for rules that apply to this guild:")
-                    print(roles_for_rules)
+                        # get unique list of roles across rules
+                        roles_for_rules = [r['role_id'] for r in rules]
+                        roles_for_rules = list(set(roles_for_rules))
 
-                    print("Removing roles from user")
-                    for role_id in roles_for_rules:
-                        role = get(guild.roles, id=int(role_id))
-                        await member.remove_roles(role)
-                        print(f"removed role {role.id}, {role.name} from {member}")
+                        print("Roles for rules that apply to this guild:")
+                        print(roles_for_rules)
 
-                    for rule in rules: 
-                        print("Checking rule", rule)
-                        balance = user_balances[rule['token_address']]
+                        try:
+                            print("Removing roles from user")
+                            for role_id in roles_for_rules:
+                                role = get(guild.roles, id=int(role_id))
+                                await member.remove_roles(role)
+                                print(f"removed role {role.id}, {role.name} from {member}")
 
-                        token_max = rule['token_max']
-                        token_min = rule['token_min']
-                        # get rule ranges
-                        if token_max is None:
-                            token_max = 999999999999999999
+                            for rule in rules: 
+                                print("Checking rule", rule)
+                                balance = user_balances[rule['token_address']]
 
-                        # get role object
-                        role = get(guild.roles, id=int(role_id))
+                                token_max = rule['token_max']
+                                token_min = rule['token_min']
+                                # get rule ranges
+                                if token_max is None:
+                                    token_max = 999999999999999999
 
-                        if balance >= token_min and balance <= token_max:
-                            print("rule satisfied - assigning role")
-                            # add role
-                            await member.add_roles(role)
-                            print(f"added '{role}' role for {member}")
+                                # get role object
+                                role = get(guild.roles, id=int(rule['role_id']))
 
-    # updating user update times
-    for user_id in user_ids:
-        update_user(user_id)
+                                if balance >= token_min and balance <= token_max:
+                                    print("rule satisfied - assigning role")
+                                    # add role
+                                    await member.add_roles(role)
+                                    print(f"added '{role}' role for {member}")
+                        except Exception as e:
+                            print(e)
+                            alex = client.get_user(519075961891979265)
+                            await alex.send(str(datetime.now()).split(".")[0] + ' ' + str(e) + ' ' + str(rule))
+
+        # updating user update times
+        for user_id in user_ids:
+            update_user(user_id)
 
 
 @client.event
