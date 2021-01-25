@@ -1,13 +1,22 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+
+### TODO
+# make sure we trigger refresh when user re-connects discord oauth
+# trigger refresh when new rule added for a guild 
+# message permissions error in admin channel
+
+
+
+
 import json
 from datetime import datetime
 import discord
 from discord.ext import tasks
 from discord.utils import find, get
 from web3 import Web3
-from database import select_unite_setup_channel_ids, insert_guild, insert_rule, select_rules, reset_rules, select_users_to_check, update_user
+from database import select_unite_setup_channel_ids, insert_guild, insert_rule, select_rules, reset_rules, select_users_to_check, update_user, reset_check_time
 
 import logging
 logger = logging.getLogger('discord')
@@ -85,11 +94,6 @@ async def on_ready():
 @tasks.loop(seconds=5.0)
 async def continuous_loop():
     print(f"Running continuous loop {str(datetime.now()).split('.')[0]}")
-
-
-    ### TODO
-    # make sure we trigger refresh when user re-connects discord oauth
-    # trigger refresh when new rule added for a guild 
 
     #####################
     ### RUN RULES PROCESS
@@ -306,6 +310,9 @@ async def on_message(message):
                     insert_rule(message.guild.id, token_address, token_min, token_max, role_id, role.name)
 
                     await message.channel.send("Rule successfully added 🙌")
+
+                    reset_check_time()
+                    print("Reset blockchain check time")
 
                     return
 

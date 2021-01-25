@@ -104,6 +104,7 @@ def update_user(account_id):
     cursor.close()
     db.close()  
 
+
 def select_users_to_check(hours_ago=4):
     datetime_check = datetime.datetime.now() - timedelta(hours=hours_ago)
 
@@ -120,3 +121,14 @@ def select_users_to_check(hours_ago=4):
         users.append(dict(zip(['account_id', 'ethereum_address'], record)))
 
     return users
+
+
+def reset_check_time():
+    # update blockchain_write_time
+    db = mysql.connect(host=secret['DBHOST'],user=secret['DBUSER'],passwd=secret['DBPASS'],database=secret['DBTABLE'])
+    cursor = db.cursor()
+    query = "UPDATE unite_staging.social_accounts set blockchain_check_time = NULL;"
+    cursor.execute(query)
+    db.commit()
+    cursor.close()
+    db.close()  
