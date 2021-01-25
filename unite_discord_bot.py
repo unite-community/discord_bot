@@ -7,7 +7,7 @@ import discord
 from discord.ext import tasks
 from discord.utils import find, get
 from web3 import Web3
-from database import select_unite_setup_channel_ids, insert_guild, insert_rule, select_rules, reset_rules, select_users, update_user
+from database import select_unite_setup_channel_ids, insert_guild, insert_rule, select_rules, reset_rules, select_users_to_check, update_user
 
 import logging
 logger = logging.getLogger('discord')
@@ -72,7 +72,8 @@ async def on_ready():
 
 
     # log all members across guilds the bot is in
-    # for guild in client.guilds:
+    for guild in client.guilds:
+        print(guild, guild.name, guild.id)
     #     member_count = guild.member_count
     #     print("{}, {}".format(guild, member_count))
     #     async for member in guild.fetch_members(limit=None):
@@ -84,22 +85,99 @@ async def on_ready():
 @tasks.loop(seconds=5.0)
 async def continuous_loop():
     print(f"Running continuous loop {str(datetime.now()).split('.')[0]}")
-    # user = client.get_user(519075961891979265)
-    # await user.send(str(datetime.now()) + ' ping')
-
-    # run roles process for:
-    # 1. all users with null updated_at in discord_user_wallets table (these just Auth'd seconds ago)
-    # 2. all users with update time older than 4 hours
 
 
+    ### TODO
+    # make sure we trigger refresh when user re-connects discord oauth
+
+    #####################
+    ### RUN RULES PROCESS
+    #####################
 
 
-    # set update time for this user
-    # update_user(member.id)
+    # select users
+    users = select_users_to_check()
+
+    # create list and dict for lookups
+    user_ids = [int(u['account_id']) for u in users]
+    user_wallets = {int(u['account_id']): u['ethereum_address'] for u in users}
+
+    print("USER IDS")
+    print(user_ids)
+
+    for guild in client.guilds:
+
+        print(f'Begin running rules process for {guild} ({guild.id})')
+        rules = select_rules(guild.id)
+        print(f"{len(rules)} rules found:")
+        print(rules)
+
+        if len(rules) > 0:
+            async for member in guild.fetch_members(limit=None):
+                print(">> ", member.id)
+                if member.id in user_ids:
+                    user_id = member.id
+
+                    print(f"matched user {member} ({user_id}) in guild ", guild)
+
+                    # get unique list of tokens
+                    token_addresses = [r['token_address'] for r in rules]
+                    token_addresses = list(set(token_addresses))
+                    print(f"{len(token_addresses)} unique tokens for rules in this guild")
+                    print(token_addresses)
+
+                    # get balances for tokens in this guild's rules
+                    user_balances = {}
+                    for token_address in token_addresses:
+                        print(f"Fetching user balance for {user_wallets[user_id]} wallet and token {token_address}")
+                        user_balances[token_address] = get_wallet_erc20_balance(user_wallets[user_id], token_address)
+
+                    print(f"{len(user_balances)} User balances for tokens in guild:")
+                    print(user_balances)
+
+                    # get unique list of roles across rules
+                    roles_for_rules = [r['role_id'] for r in rules]
+                    roles_for_rules = list(set(roles_for_rules))
+
+                    print("Roles for rules that apply to this guild:")
+                    print(roles_for_rules)
+
+                    print("Removing roles from user")
+                    for role_id in roles_for_rules:
+                        role = get(guild.roles, id=int(role_id))
+                        await member.remove_roles(role)
+                        print(f"removed role {role.id}, {role.name} from {member}")
+
+                    for rule in rules: 
+                        print("Checking rule", rule)
+                        balance = user_balances[rule['token_address']]
+
+                        token_max = rule['token_max']
+                        token_min = rule['token_min']
+                        # get rule ranges
+                        if token_max is None:
+                            token_max = 999999999999999999
+
+                        # get role object
+                        role = get(guild.roles, id=int(role_id))
+
+                        if balance >= token_min and balance <= token_max:
+                            print("rule satisfied - assigning role")
+                            # add role
+                            await member.add_roles(role)
+                            print(f"added '{role}' role for {member}")
+
+    # updating user update times
+    for user_id in user_ids:
+        update_user(user_id)
 
 
 @client.event
 async def on_guild_join(guild):
+
+    # DM alex
+    user = client.get_user(519075961891979265)
+    await user.send(str(datetime.now()).split(".")[0] + ' Unite bot added to new guild ' + guild.name + ' ' + str(guild.id))
 
     # post hello message
     general = find(lambda x: x.name == 'general', guild.text_channels)
@@ -162,11 +240,8 @@ async def on_message(message):
     try:
         if message.channel.id in unite_setup_channels:
 
-            if message.content.startswith('test'):
-                async for member in message.guild.fetch_members(limit=None):
-                    print("{},{},{},{}".format(message.guild, member, member.id, member.display_name))
-                return
-
+            # if message.content.startswith('test'):
+            #     return
 
             if message.content.lower().startswith('hello') or message.content.lower().startswith('hi'):
                 await message.channel.send("Hi " + message.author.name.split(" ")[0])
@@ -225,50 +300,6 @@ async def on_message(message):
 
                     await message.channel.send("Rule successfully added 🙌")
 
-
-                    #####################
-                    ### RUN RULES PROCESS
-                    #####################
-
-                    await message.channel.send("Running roles update process...")
-
-                    # select users
-                    users = select_users()
-
-                    # create list and dict for lookups
-                    user_ids = [int(u['discord_user_id']) for u in users]
-                    user_wallets = {int(u['discord_user_id']): u['ethereum_address'] for u in users}
-
-                    roles_updated = 0
-                    async for member in message.guild.fetch_members(limit=None):
-                        print("{},{},{},{}".format(message.guild, member, member.id, member.display_name))
-                        if member.id in user_ids:
-                            print(f"User match {member.id} - begin roles process")
-
-                            # get wallet for this user
-                            wallet = user_wallets[member.id]
-
-                            # get user balance for this token
-                            balance = get_wallet_erc20_balance(wallet, token_address)
-                            print(f"Token {token_address} balance for user: {balance}")
-
-                            # get rule ranges
-                            if token_max is None:
-                                token_max = 999999999999999999
-
-                            # get role object
-                            role = get(message.guild.roles, id=int(role_id))
-
-                            if balance >= token_min and balance <= token_max:
-                                print("rule satisfied - assigning role")
-                                roles_updated += 1
-                                # add role
-                                await member.add_roles(role)
-                                print(f"added '{role}' role for {member}")
-                            else:
-                                # remove role
-                                await member.remove_roles(role)
-                                print(f"removed '{role}' role for {member}")
                     return
 
                 except Exception as e:

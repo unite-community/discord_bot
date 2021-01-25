@@ -1,5 +1,6 @@
 import mysql.connector as mysql
 import datetime
+from datetime import timedelta
 
 # load api key
 secret = {}
@@ -79,7 +80,7 @@ def reset_rules(guild_id):
 def select_users():
     db = mysql.connect(host=secret['DBHOST'],user=secret['DBUSER'],passwd=secret['DBPASS'],database=secret['DBTABLE'])
     cursor = db.cursor()
-    query = f'SELECT discord_user_id, discord_user_name, ethereum_address FROM discord_user_wallets;'
+    query = f'SELECT account_id, user_ethereum_address FROM social_accounts;'
     cursor.execute(query)
     records = cursor.fetchall()
     cursor.close()
@@ -87,20 +88,35 @@ def select_users():
     #
     users = []
     for record in records:
-        users.append(dict(zip(['discord_user_id', 'discord_user_name', 'ethereum_address'], record)))
+        users.append(dict(zip(['discord_user_id', 'ethereum_address'], record)))
     return users
 
 
-def update_user(discord_user_id):
+def update_user(account_id):
     # update blockchain_write_time
     db = mysql.connect(host=secret['DBHOST'],user=secret['DBUSER'],passwd=secret['DBPASS'],database=secret['DBTABLE'])
     cursor = db.cursor()
-    query = "UPDATE discord_user_wallets SET updated_at=%s WHERE discord_user_id=%s;"
-    values = (str(datetime.datetime.now()).split('.')[0], discord_user_id)
+    query = "UPDATE social_accounts SET blockchain_check_time=%s WHERE account_id=%s;"
+    values = (str(datetime.datetime.now()).split('.')[0], account_id)
     cursor.execute(query, values)
     db.commit()
     print(f"Updated {values[1]} to {values[0]}")
     cursor.close()
     db.close()  
 
+def select_users_to_check(hours_ago=4):
+    datetime_check = datetime.datetime.now() - timedelta(hours=hours_ago)
 
+    db = mysql.connect(host=secret['DBHOST'],user=secret['DBUSER'],passwd=secret['DBPASS'],database=secret['DBTABLE'])
+    cursor = db.cursor()
+    query = f'SELECT account_id, user_ethereum_address FROM unite_staging.social_accounts WHERE (blockchain_check_time <= "{str(datetime_check)}" OR blockchain_check_time IS NULL);;'
+    cursor.execute(query)
+    records = cursor.fetchall()
+    cursor.close()
+    db.close()
+
+    users = []
+    for record in records:
+        users.append(dict(zip(['account_id', 'ethereum_address'], record)))
+
+    return users
